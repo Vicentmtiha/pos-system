@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Low Stock Alerts - POS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">POS System</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/products">Products</a>
+                <a class="nav-link active" href="/inventory/low-stock">Low Stock Alerts</a>
+                <a class="nav-link" href="/orders/create">Mauzo Mapya</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">⚠️ Bidhaa Zinazoelekea Kuisha (Low Stock)</h4>
+                <span class="badge bg-white text-danger fs-6">{{ products|length }} Bidhaa</span>
+            </div>
+            <div class="card-body">
+                {% if products %}
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Jina la Bidhaa</th>
+                            <th>Stoki Ililiyopo</th>
+                            <th>Min Level Alert</th>
+                            <th>Hali (Status)</th>
+                            <th>Hatua</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td><strong>{{ product.name }}</strong></td>
+                            <td><span class="badge bg-danger fs-6">{{ product.quantity }}</span></td>
+                            <td>{{ product.min_stock_level }}</td>
+                            <td>
+                                {% if product.quantity == 0 %}
+                                    <span class="badge bg-dark">Imeisha Kabisa!</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Inaisha Hivi Karibuni</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <!-- Modal Trigger Button -->
+                                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#restockModal{{ product.id }}">
+                                    ➕ Restock (Ongeza Mzigo)
+                                </button>
+
+                                <!-- Modal ya Restock -->
+                                <div class="modal fade" id="restockModal{{ product.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form action="/products/restock/{{ product.id }}" method="POST">
+                                                <div class="modal-header bg-success text-white">
+                                                    <h5 class="modal-title">Restock: {{ product.name }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Idadi ya Kuongeza</label>
+                                                        <input type="number" name="added_quantity" class="form-control" min="1" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Bei Mpya ya Kununulia (Cost Price - TSH)</label>
+                                                        <input type="number" name="new_cost_price" class="form-control" value="{{ product.cost_price or 0 }}" step="any">
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Funga</button>
+                                                    <button type="submit" class="btn btn-success">Hifadhi Mzigo Mpya</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-4">
+                    <h5 class="text-success">✅ Stoki ipo ya kutosha! Hakuna bidhaa iliyo chini ya kiwango cha alert.</h5>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

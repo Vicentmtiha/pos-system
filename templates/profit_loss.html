@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Profit & Loss Report - POS System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">POS System</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/products">Products</a>
+                <a class="nav-link" href="/inventory/low-stock">Low Stock Alerts</a>
+                <a class="nav-link active" href="/reports/profit-loss">Profit & Loss</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        <h2 class="mb-4">📊 Ripoti ya Faida na Hasara (Profit & Loss)</h2>
+
+        <!-- Filter Form ya Tarehe -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="GET" action="/reports/profit-loss" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label font-weight-bold">Anzia Tarehe:</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label font-weight-bold">Mwisho Tarehe:</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100">🔍 Chuja Ripoti</button>
+                        <a href="/reports/profit-loss" class="btn btn-outline-secondary">Orodha Yote</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+            <!-- Total Revenue -->
+            <div class="col-md-4">
+                <div class="card border-0 bg-primary text-white shadow-sm">
+                    <div class="card-body">
+                        <h6 class="text-uppercase text-white-50 fs-7">Jumla ya Mauzo (Revenue)</h6>
+                        <h3 class="mb-0">TZS {{ "{:,.2f}".format(total_revenue) }}</h3>
+                    </div>
+                </div>
+            </div>
+            <!-- COGS -->
+            <div class="col-md-4">
+                <div class="card border-0 bg-secondary text-white shadow-sm">
+                    <div class="card-body">
+                        <h6 class="text-uppercase text-white-50 fs-7">Gharama za Mzigo (COGS)</h6>
+                        <h3 class="mb-0">TZS {{ "{:,.2f}".format(total_cogs) }}</h3>
+                    </div>
+                </div>
+            </div>
+            <!-- Net Profit -->
+            <div class="col-md-4">
+                <div class="card border-0 {% if net_profit >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white shadow-sm">
+                    <div class="card-body">
+                        <h6 class="text-uppercase text-white-50 fs-7">
+                            {% if net_profit >= 0 %}Faida Halisi (Net Profit){% else %}Hasara Halisi (Net Loss){% endif %}
+                        </h6>
+                        <h3 class="mb-0">TZS {{ "{:,.2f}".format(net_profit | abs) }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mchanganuo wa Oda -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-dark">Mchanganuo wa Mauzo na Faida</h5>
+                <span class="badge bg-info text-dark fs-6">Vitu Vilivyouzwa: {{ total_items_sold }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Oda #</th>
+                                <th>Tarehe</th>
+                                <th>Mauzo (Sales)</th>
+                                <th>Gharama (Cost)</th>
+                                <th>Hali ya Faida / Hasara</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            {% set ns = namespace(order_cost=0.0) %}
+                            {% for item in order.order_items %}
+                                {% set item_cost = (item.product.cost_price if item.product and item.product.cost_price else 0.0) * item.quantity %}
+                                {% set ns.order_cost = ns.order_cost + item_cost %}
+                            {% endfor %}
+                            {% set order_profit = order.total_amount - ns.order_cost %}
+                            <tr>
+                                <td><strong>#{{ order.id }}</strong></td>
+                                <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>TZS {{ "{:,.2f}".format(order.total_amount) }}</td>
+                                <td>TZS {{ "{:,.2f}".format(ns.order_cost) }}</td>
+                                <td>
+                                    <span class="badge {% if order_profit >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if order_profit >= 0 %}
+                                            Faida: TZS {{ "{:,.2f}".format(order_profit) }}
+                                        {% else %}
+                                            Hasara: TZS {{ "{:,.2f}".format(order_profit | abs) }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    Hakuna taarifa za mauzo zilizopatikana kwa kipindi hiki.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

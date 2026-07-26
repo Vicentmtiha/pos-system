@@ -1,0 +1,20 @@
+{% extends "base.html" %} <!-- Hakikisha unayo base.html -->
+{% block content %}
+    <h1>Hariri Bidhaa: {{ product.name }}</h1>
+    <form action="/edit_product/{{ product.id }}" method="post" style="max-width: 400px;">
+        <div style="margin-bottom: 10px;">
+            <label>Jina la Bidhaa:</label><br>
+            <input type="text" name="name" value="{{ product.name }}" required style="width: 100%; padding: 8px;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label>Bei (TZS):</label><br>
+            <input type="number" name="price" value="{{ product.price }}" step="0.01" required style="width: 100%; padding: 8px;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label>Kiasi:</label><br>
+            <input type="number" name="quantity" value="{{ product.quantity }}" required style="width: 100%; padding: 8px;">
+        </div>
+        <button type="submit" style="background: #e67e22; color: white; padding: 10px 20px; border: none; cursor: pointer;">Hifadhi Mabadiliko</button>
+        <a href="/dashboard" style="margin-left: 10px;">Ghairi</a>
+    </form>
+{% endblock %}

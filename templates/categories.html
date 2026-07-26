@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Categories</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<h1>Categories</h1>
+<a href="/categories/add">Add New Category</a>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for category in categories %}
+        <tr>
+            <td>{{ category.id }}</td>
+            <td>{{ category.name }}</td>
+            <td>{{ category.description or '' }}</td>
+            <td>{{ category.created_at.strftime("%Y-%m-%d") }}</td>
+            <td>
+                <a href="/categories/edit/{{ category.id }}">Edit</a>
+                <form action="/categories/delete/{{ category.id }}" method="post" style="display:inline;">
+                    <button type="submit" onclick="return confirm('Delete this category?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<a href="/">Back to Dashboard</a>
+</body>
+</html>

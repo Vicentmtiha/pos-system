@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Customers</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<h1>Customers</h1>
+<a href="/customers/add">Add New Customer</a>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Created At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for customer in customers %}
+        <tr>
+            <td>{{ customer.id }}</td>
+            <td>{{ customer.name }}</td>
+            <td>{{ customer.email or '' }}</td>
+            <td>{{ customer.phone or '' }}</td>
+            <td>{{ customer.created_at.strftime("%Y-%m-%d") }}</td>
+            <td>
+                <a href="/customers/edit/{{ customer.id }}">Edit</a>
+                <form action="/customers/delete/{{ customer.id }}" method="post" style="display:inline;">
+                    <button type="submit" onclick="return confirm('Delete this customer?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<a href="/">Back to Dashboard</a>
+</body>
+</html>

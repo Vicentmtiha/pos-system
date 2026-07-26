@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Debts</title>
+    <link rel="stylesheet" href="/static/style.css"> <!-- Badilisha kulingana na css yako -->
+</head>
+<body>
+    <div class="container">
+        <h1>Orodha ya Madeni ya Wateja</h1>
+        <a href="/">Rudi Nyumbani</a>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Jina la Mteja</th>
+                    <th>Simu</th>
+                    <th>Salio la Deni (Balance)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers_with_debts %}
+                <tr>
+                    <td>{{ customer.name }}</td>
+                    <td>{{ customer.phone }}</td>
+                    <td>{{ customer.current_balance }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3">Hakuna wateja wenye madeni kwa sasa.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

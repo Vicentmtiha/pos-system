@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Risiti #{{ order.id }}</title>
+    <style>
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            width: 300px; 
+            margin: auto; 
+            padding: 10px; 
+            font-size: 13px;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th, td { text-align: left; padding: 3px 0; vertical-align: top; }
+        .total-section { font-weight: bold; margin-top: 5px; }
+        @media print { 
+            .no-print { display: none; } 
+            body { width: 100%; margin: 0; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="text-center">
+        <h3 style="margin: 0; padding: 0;">CORE-POS</h3>
+        <p style="margin: 2px 0; font-size: 11px;">Duka la Bidhaa & Huduma</p>
+        <p style="margin: 2px 0; font-size: 11px;">Simu: +255 700 000 000</p>
+    </div>
+
+    <div class="line"></div>
+
+    <div>
+        <strong>Risiti No:</strong> #{{ order.id }}<br>
+        <strong>Tarehe:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '' }}<br>
+        <strong>Mteja:</strong> {{ order.customer.name if order.customer else 'Walk-in Customer' }}
+    </div>
+
+    <div class="line"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 45%;">Item</th>
+                <th class="text-center" style="width: 15%;">Qty</th>
+                <th class="text-right" style="width: 40%;">TSH</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# Relation iliyopo kwenye Order model ni order_items #}
+            {% for item in order.order_items %}
+            <tr>
+                <td>{{ item.product.name if item.product else 'Bidhaa' }}</td>
+                <td class="text-center">{{ item.quantity }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.subtotal) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" class="text-center">Hakuna bidhaa kwenye oda hii</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="line"></div>
+
+    <table class="total-section">
+        <tr>
+            <td>JUMLA KUU:</td>
+            <td class="text-right">TSH {{ "{:,.0f}".format(order.total_amount) }}</td>
+        </tr>
+    </table>
+
+    <div class="line"></div>
+
+    <div class="text-center" style="margin-top: 10px;">
+        <p style="margin: 0; font-size: 11px;">Ahsante kwa Kuitumia CORE-POS!</p>
+        <p style="margin: 0; font-size: 10px; font-style: italic;">Karibu Tena</p>
+    </div>
+
+    <div class="text-center no-print" style="margin-top: 20px;">
+        <button onclick="window.print()" style="padding: 8px 16px; font-weight: bold; cursor: pointer;">
+            🖨️ Print Risiti
+        </button>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% if category %}Edit{% else %}Add{% endif %} Category</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<h1>{% if category %}Edit{% else %}Add{% endif %} Category</h1>
+<form method="post" action="{% if category %}/categories/edit/{{ category.id }}{% else %}/categories/add{% endif %}">
+    <label for="name">Name:</label><br>
+    <input type="text" id="name" name="name" required value="{{ category.name if category else '' }}"><br><br>
+    <label for="description">Description:</label><br>
+    <textarea id="description" name="description">{{ category.description if category else '' }}</textarea><br><br>
+    <button type="submit">{% if category %}Update{% else %}Add{% endif %} Category</button>
+</form>
+<a href="/categories">Back to Categories</a>
+</body>
+</html>

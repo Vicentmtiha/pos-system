@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Mauzo Mapya - POS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">POS System</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/products">Products</a>
+                <a class="nav-link" href="/customers/debts">Madeni ya Wateja</a>
+                <a class="nav-link active" href="/orders/create">Mauzo Mapya</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card shadow-sm mb-5">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Tengeneza Oda / Mauzo Mapya</h4>
+            </div>
+            <div class="card-body">
+                <form id="orderForm">
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">Chagua Mteja</label>
+                        <select class="form-select" id="customer">
+                            <option value="" selected>Mteja wa Kawaida (Walk-in Customer)</option>
+                            {% for customer in customers %}
+                                <option value="{{ customer.id }}">{{ customer.name }} (Deni: TSH {{ customer.current_balance }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <hr>
+
+                    <h5>Chagua Bidhaa</h5>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <select class="form-select" id="productSelect">
+                                <option value="" disabled selected>Chagua Bidhaa...</option>
+                                {% for product in products %}
+                                    <option value="{{ product.id }}" data-price="{{ product.price }}" data-name="{{ product.name }}" data-stock="{{ product.quantity }}">
+                                        {{ product.name }} - TSH {{ product.price }} (Iliyopo: {{ product.quantity }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="number" class="form-control" id="productQty" value="1" min="1" placeholder="Idadi">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="btn btn-primary w-100" id="addItemBtn">Weka Kwenye Orodha</button>
+                        </div>
+                    </div>
+
+                    <table class="table table-bordered mt-3">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Bidhaa</th>
+                                <th>Bei</th>
+                                <th>Idadi</th>
+                                <th>Jumla</th>
+                                <th>Kitendo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderTableBody"></tbody>
+                    </table>
+
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Njia ya Malipo</label>
+                                <select class="form-select" id="paymentMethod">
+                                    <option value="CASH" selected>Cash (Pesa Taslimu)</option>
+                                    <option value="MOBILE">Mobile Money (M-Pesa/Tigo/Airtel)</option>
+                                    <option value="CARD">Kadi / Benki</option>
+                                    <option value="CREDIT" class="text-danger fw-bold">CREDIT (Mauzo ya Mkopo)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label font-weight-bold">Kiasi Kilicholipwa na Mteja (TSH)</label>
+                                <input type="number" class="form-control form-control-lg" id="amountPaid" placeholder="Mfano: 120000" step="any" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 text-end">
+                            <h4>Jumla Kuu: TSH <span id="grandTotal">0.00</span></h4>
+                            <h5 class="text-primary mt-2">Chenji: TSH <span id="changeAmount">0.00</span></h5>
+                            <button type="submit" class="btn btn-success btn-lg mt-3 w-100">Kamilisha Mauzo</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedItems = [];
+        let totalAmountCalculated = 0;
+
+        // Kama njia ya malipo ikibadilishwa kuwa CREDIT, weka kiasi kilicholipwa kuwa 0 kiotomatiki
+        document.getElementById('paymentMethod').addEventListener('change', function() {
+            const method = this.value;
+            const amountPaidInput = document.getElementById('amountPaid');
+            if (method === 'CREDIT') {
+                amountPaidInput.value = 0;
+                amountPaidInput.disabled = true;
+            } else {
+                amountPaidInput.disabled = false;
+            }
+            calculateChange();
+        });
+
+        document.getElementById('addItemBtn').addEventListener('click', function() {
+            const select = document.getElementById('productSelect');
+            const qtyInput = document.getElementById('productQty');
+            const productId = parseInt(select.value);
+            const qty = parseInt(qtyInput.value);
+
+            if (!productId || qty <= 0) return alert('Chagua bidhaa na idadi sahihi!');
+
+            const option = select.options[select.selectedIndex];
+            const name = option.getAttribute('data-name');
+            const price = parseFloat(option.getAttribute('data-price'));
+            const stock = parseInt(option.getAttribute('data-stock'));
+
+            if (qty > stock) return alert('Idadi unayotaka inazidi iliyopo stoo!');
+
+            const existingIndex = selectedItems.findIndex(item => item.product_id === productId);
+            if (existingIndex > -1) {
+                if ((selectedItems[existingIndex].quantity + qty) > stock) {
+                    return alert('Jumla ya idadi unayoweka inazidi stoki iliyopo!');
+                }
+                selectedItems[existingIndex].quantity += qty;
+                selectedItems[existingIndex].subtotal = selectedItems[existingIndex].quantity * price;
+            } else {
+                selectedItems.push({ product_id: productId, name: name, price: price, quantity: qty, subtotal: price * qty });
+            }
+
+            renderTable();
+        });
+
+        function removeItem(index) {
+            selectedItems.splice(index, 1);
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+            totalAmountCalculated = 0;
+
+            selectedItems.forEach((item, index) => {
+                totalAmountCalculated += item.subtotal;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>TSH ${item.price}</td>
+                        <td>${item.quantity}</td>
+                        <td>TSH ${item.subtotal}</td>
+                        <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${index})">Ondoa</button></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('grandTotal').innerText = totalAmountCalculated.toFixed(2);
+            calculateChange();
+        }
+
+        function calculateChange() {
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            if (paymentMethod === 'CREDIT') {
+                document.getElementById('changeAmount').innerText = "0.00";
+                return;
+            }
+            const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+            const change = amountPaid - totalAmountCalculated;
+            document.getElementById('changeAmount').innerText = change > 0 ? change.toFixed(2) : "0.00";
+        }
+
+        document.getElementById('amountPaid').addEventListener('input', calculateChange);
+
+        document.getElementById('orderForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const customerVal = document.getElementById('customer').value;
+            const customerId = customerVal ? parseInt(customerVal) : null;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const amountPaid = paymentMethod === 'CREDIT' ? 0 : (parseFloat(document.getElementById('amountPaid').value) || 0);
+
+            if (selectedItems.length === 0) {
+                return alert('Tafadhali chagua angalau bidhaa moja kwenye orodha!');
+            }
+
+            if (paymentMethod === 'CREDIT' && !customerId) {
+                return alert('Samahani, huwezi kuuza kwa mkopo (Credit) bila kumchagua mteja husika!');
+            }
+
+            if (amountPaid < totalAmountCalculated && paymentMethod === 'CASH') {
+                return alert(`Kiasi kilicholipwa (TSH ${amountPaid}) ni kidogo kuliko Jumla Kuu (TSH ${totalAmountCalculated})!`);
+            }
+
+            const response = await fetch('/orders/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer_id: customerId,
+                    items: selectedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+                    amount_paid: amountPaid,
+                    payment_method: paymentMethod
+                })
+            });
+
+            if (response.ok) {
+                const resData = await response.json();
+                alert('Mauzo yamekamilika kwa mafanikio!');
+                window.location.href = `/orders/receipt/${resData.order_id}`;
+            } else {
+                const err = await response.json();
+                alert('Hitilafu: ' + err.detail);
+            }
+        });
+    </script>
+</body>
+</html>

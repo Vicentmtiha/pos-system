@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register - POS System</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex justify-content-center align-items-center vh-100">
+
+<div class="card shadow-sm p-4" style="width: 400px;">
+    <h3 class="text-center mb-3 text-primary">Tengeneza Duka na Akaunti</h3>
+    
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/register">
+        <div class="mb-3">
+            <label class="form-label">Jina la Duka (Store Name)</label>
+            <input type="text" name="store_name" class="form-control" placeholder="Mf. Duka Langu Store" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Jina Kamili (Full Name)</label>
+            <input type="text" name="full_name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Jisajili Sasa</button>
+    </form>
+    
+    <div class="text-center mt-3">
+        <p class="small">Una akaunti tayari? <a href="/login">Ingia hapa</a></p>
+    </div>
+</div>
+
+</body>
+</html>

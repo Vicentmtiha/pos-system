@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Ongeza Bidhaa - POS System</title>
+</head>
+<body>
+    <h1>Ongeza Bidhaa Mpya</h1>
+
+    <form action="/add_product" method="POST">
+        <label for="name">Jina la Bidhaa:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="price">Bei (TZS):</label><br>
+        <input type="number" step="any" id="price" name="price" required><br><br>
+
+        <label for="quantity">Idadi (Quantity):</label><br>
+        <input type="number" id="quantity" name="quantity" required><br><br>
+
+        <label for="category_id">Kategoria:</label><br>
+        <select id="category_id" name="category_id" required>
+            {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <button type="submit">Hifadhi Bidhaa</button>
+    </form>
+
+    <br>
+    <a href="/dashboard">Rudi kwenye Dashboard</a>
+</body>
+</html>

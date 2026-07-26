@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <title>Ongeza Kategoria - POS System</title>
+</head>
+<body>
+    <h1>Ongeza Kategoria Mpya</h1>
+
+    <form action="/add_category" method="POST">
+        <label for="name">Jina la Kategoria:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="description">Maelezo (Hiari):</label><br>
+        <textarea id="description" name="description"></textarea><br><br>
+
+        <button type="submit">Hifadhi Kategoria</button>
+    </form>
+
+    <br>
+    <a href="/dashboard">Rudi kwenye Dashboard</a>
+</body>
+</html>

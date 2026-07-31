@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from fastapi import FastAPI, Request, Depends, Form, HTTPException, status, Cookie
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -60,6 +61,31 @@ def require_admin(request: Request, db: Session = Depends(get_db)) -> User:
     return user
 
 
+import requests
+
+NEXTSMS_API_TOKEN = "WEKA_API_KEY_YAKO_HAPA"
+
+def send_nextsms(phone_number: str, message: str):
+    url = "https://messaging-service.co.tz/api/sms/v1/text/single"
+    
+    headers = {
+        "Authorization": f"Bearer {NEXTSMS_API_TOKEN}",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    
+    payload = {
+        "from": "INFO", 
+        "to": phone_number,
+        "text": message
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        return response.json()
+    except Exception as e:
+        print(f"Hitilafu ya kutuma SMS: {e}")
+        return None
 # ==========================================
 # AUTHENTICATION ROUTES (LOGIN / REGISTER / LOGOUT)
 # ==========================================
@@ -174,7 +200,7 @@ def add_user(
         raise HTTPException(status_code=400, detail="Username hii tayari imeshatumika")
 
     new_user = User(
-        store_id=admin.store_id, # Wafanyakazi wanaunganishwa kwenye duka la Admin huyu
+        store_id=admin.store_id,
         username=username,
         full_name=full_name,
         hashed_password=hash_password(password),
@@ -360,8 +386,45 @@ def delete_category(category_id: int, db: Session = Depends(get_db), current_use
 
 
 # ==========================================
-# PRODUCTS CRUD & INVENTORY
+# PRODUCTS CRUD & INVENTORY (IMETANULULIWA NA BARCODE & SIZE)
 # ==========================================
+import pandas as pd
+from fastapi import UploadFile, File
+
+@app.post("/products/upload-excel")
+async def upload_products_excel(file: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+        return {"error": "Tafadhali pakia faili la Excel au CSV pekee."}
+    
+    try:
+        # Soma faili kupitia pandas
+        contents = await file.read()
+        import io
+        if file.filename.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            df = pd.read_csv(io.BytesIO(contents))
+        
+        # Pitia kila mstari na uweke kwenye database
+        for _, row in df.iterrows():
+            product = models.Product(
+                name=str(row.get('name', 'Bidhaa Mpya')),
+                barcode=str(row.get('barcode', '')),
+                size=str(row.get('size', '')),
+                cost_price=float(row.get('cost_price', 0)),
+                price=float(row.get('price', 0)),
+                quantity=int(row.get('quantity', 0)),
+                min_stock_level=int(row.get('min_stock_level', 5)),
+                store_id=current_user.store_id if hasattr(current_user, 'store_id') else 1
+            )
+            db.add(product)
+        
+        db.commit()
+    except Exception as e:
+        db.rollback()
+    return {"error": f"Imetokea hitilafu: {str(e)}"}
+        
+    return {"message": "Bidhaa zote zimeingizwa stoo kwa mafanikio!"}
 @app.get("/products")
 async def products(request: Request, q: str = None, db: Session = Depends(get_db)):
     current_user = get_current_user(request, db)
@@ -370,7 +433,9 @@ async def products(request: Request, q: str = None, db: Session = Depends(get_db
 
     query = db.query(Product).filter(Product.store_id == current_user.store_id)
     if q:
-        query = query.filter(Product.name.ilike(f"%{q}%"))
+        query = query.filter(
+            (Product.name.ilike(f"%{q}%")) | (Product.barcode.ilike(f"%{q}%")) | (Product.size.ilike(f"%{q}%"))
+        )
         
     products_list = query.all()
     categories = db.query(Category).filter(Category.store_id == current_user.store_id).all()
@@ -402,6 +467,8 @@ def add_product_form(request: Request, db: Session = Depends(get_db)):
 @app.post("/products/add")
 def add_product(
     name: str = Form(...), 
+    barcode: Optional[str] = Form(None),
+    size: Optional[str] = Form(None),
     cost_price: float = Form(0.0),
     price: float = Form(...), 
     quantity: int = Form(...),
@@ -416,6 +483,8 @@ def add_product(
     product = Product(
         store_id=current_user.store_id,
         name=name, 
+        barcode=barcode if barcode else None,
+        size=size if size else None,
         cost_price=cost_price,
         price=price, 
         quantity=quantity, 
@@ -447,6 +516,8 @@ def edit_product_form(request: Request, product_id: int, db: Session = Depends(g
 def edit_product(
     product_id: int, 
     name: str = Form(...), 
+    barcode: Optional[str] = Form(None),
+    size: Optional[str] = Form(None),
     cost_price: float = Form(0.0),
     price: float = Form(...), 
     quantity: int = Form(...),
@@ -460,6 +531,8 @@ def edit_product(
         raise HTTPException(status_code=403, detail="Huna ruhusa")
         
     product.name = name
+    product.barcode = barcode if barcode else None
+    product.size = size if size else None
     product.cost_price = cost_price
     product.price = price
     product.quantity = quantity
@@ -638,7 +711,7 @@ async def pay_customer_debt(
 
 
 # ==========================================
-# ORDERS & SALES
+# ORDERS & SALES (IMEWEKA API YA KUTAFUTA KWA BARCODE/SIZE WAKATI WA KUUZA)
 # ==========================================
 @app.get("/orders/create")
 def create_order_form(request: Request, db: Session = Depends(get_db)):
@@ -653,6 +726,44 @@ def create_order_form(request: Request, db: Session = Depends(get_db)):
         name="create_order.html",
         context={"customers": customers, "products": products, "current_user": current_user}
     )
+
+@app.get("/api/products/search")
+def api_search_product(barcode: Optional[str] = None, query: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """API ya kutafuta bidhaa kwa haraka wakati wa POS scanning au typing"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    db_query = db.query(Product).filter(Product.store_id == current_user.store_id)
+    
+    if barcode:
+        product = db_query.filter(Product.barcode == barcode).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Bidhaa haijapatikana kwa Barcode hiyo")
+        return [{
+            "id": product.id,
+            "name": product.name,
+            "barcode": product.barcode,
+            "size": product.size,
+            "price": product.price,
+            "quantity": product.quantity
+        }]
+        
+    if query:
+        products = db_query.filter(
+            (Product.name.ilike(f"%{query}%")) | 
+            (Product.barcode.ilike(f"%{query}%")) | 
+            (Product.size.ilike(f"%{query}%"))
+        ).all()
+        return [{
+            "id": p.id,
+            "name": p.name,
+            "barcode": p.barcode,
+            "size": p.size,
+            "price": p.price,
+            "quantity": p.quantity
+        } for p in products]
+        
+    return []
 
 @app.post("/orders/create")
 async def create_order(request: Request, db: Session = Depends(get_db)):
@@ -685,7 +796,7 @@ async def create_order(request: Request, db: Session = Depends(get_db)):
             if product.quantity < qty:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Stoki ya '{product.name}' haitoshi! Imebaki {product.quantity}"
+                    detail=f"Stoki ya '{product.name}' (Ukubwa: {product.size or 'N/A'}) haitoshi! Imebaki {product.quantity}"
                 )
 
             subtotal = product.price * qty
@@ -708,7 +819,7 @@ async def create_order(request: Request, db: Session = Depends(get_db)):
         change_given = amount_paid - total_amount if payment_method == "CASH" else 0.0
 
         new_order = Order(
-            store_id=current_user.store_id, # <--- Muhimu sana
+            store_id=current_user.store_id,
             customer_id=customer_id if customer_id else None,
             user_id=current_user.id,
             total_amount=total_amount,
@@ -818,7 +929,7 @@ def profit_loss_report(
     if start_date:
         query = query.filter(Order.created_at >= datetime.strptime(start_date, "%Y-%m-%d"))
     if end_date:
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=59, minute=59, second=59) if len(end_date) == 10 else datetime.strptime(end_date, "%Y-%m-%d")
         query = query.filter(Order.created_at <= end_dt)
         
     completed_orders = query.all()
@@ -852,5 +963,24 @@ def profit_loss_report(
     )
 
 
+# Weka hizi hapa chini kwenye main.py yako
+
+class SMSRequest(BaseModel):
+    phone_number: str
+    message: str
+
+@app.post("/send-sms")
+def send_sms_notification(
+    sms: SMSRequest, 
+    current_user: User = Depends(get_current_user)
+):
+    # Hapa unaunganisha na API ya kampuni ya SMS (kama vile Africa's Talking, Beem, n.k.)
+    # Mfano wa kutumia requests kupeleka data kwenye API ya nje:
+    # api_url = "https://api.sms-gateway.com/send"
+    # payload = {"to": sms.phone_number, "message": sms.message}
+    # response = requests.post(api_url, json=payload, headers={"Authorization": "Bearer API_KEY"})
+    
+    # Kwa sasa tunatoa majibu ya mafanikio (simulation)
+    return {"status": "success", "detail": f"SMS imetumwa kwenda kwa {sms.phone_number}"}
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)

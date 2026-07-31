@@ -13,7 +13,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     CASHIER = "CASHIER"
 
-# 1. Jedwali Jipya la Maduka (Stores)
+# 1. Jedwali la Maduka (Stores)
 class Store(Base):
     __tablename__ = "stores"
     
@@ -31,8 +31,8 @@ class Store(Base):
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
-    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False) # <--- Imeongezwa
-    name = Column(String, nullable=False) # Kumbuka: ukiweka store_id, unique=True ya jina pekee inaweza kuleta mgongano kama maduka mawili yatakuwa na jina sawa la aina (mfano "Vinywaji"). Ni vyema jina liwe unique kwa duka husika au liondolewe unique ya jumla.
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    name = Column(String, nullable=False) 
     description = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -42,8 +42,10 @@ class Category(Base):
 class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
-    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False) # <--- Imeongezwa
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     name = Column(String, nullable=False)
+    barcode = Column(String, unique=True, index=True, nullable=True)  # <--- Imeongezwa kwa ajili ya Barcode Scanner
+    size = Column(String, nullable=True)                              # <--- Imeongezwa kwa ajili ya Size / Vipimo (mfano: Small, 500ml)
     cost_price = Column(Float, default=0.0)
     price = Column(Float, nullable=False)
     quantity = Column(Integer, default=0)
@@ -58,7 +60,7 @@ class Product(Base):
 class Customer(Base):
     __tablename__ = "customers"
     id = Column(Integer, primary_key=True, index=True)
-    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False) # <--- Imeongezwa
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     name = Column(String, nullable=False)
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
@@ -71,7 +73,7 @@ class Customer(Base):
 class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
-    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False) # <--- Imeongezwa
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     total_amount = Column(Float, default=0.0)
@@ -98,7 +100,7 @@ class OrderItem(Base):
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False) # <--- Imeongezwa (Kila mtumiaji yuko kwenye duka lake)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     full_name = Column(String, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)

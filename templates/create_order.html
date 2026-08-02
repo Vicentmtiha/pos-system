@@ -103,7 +103,6 @@
         let selectedItems = [];
         let totalAmountCalculated = 0;
 
-        // Kama njia ya malipo ikibadilishwa kuwa CREDIT, weka kiasi kilicholipwa kuwa 0 kiotomatiki
         document.getElementById('paymentMethod').addEventListener('change', function() {
             const method = this.value;
             const amountPaidInput = document.getElementById('amountPaid');
@@ -205,24 +204,39 @@
                 return alert(`Kiasi kilicholipwa (TSH ${amountPaid}) ni kidogo kuliko Jumla Kuu (TSH ${totalAmountCalculated})!`);
             }
 
+            const payload = {
+                customer_id: customerId,
+                items: selectedItems.map(i => ({
+                    product_id: i.product_id,
+                    quantity: i.quantity
+                })),
+                payment_method: paymentMethod,
+                amount_paid: amountPaid
+            };
+
             const response = await fetch('/orders/create', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    customer_id: customerId,
-                    items: selectedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
-                    amount_paid: amountPaid,
-                    payment_method: paymentMethod
-                })
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
                 const resData = await response.json();
                 alert('Mauzo yamekamilika kwa mafanikio!');
-                window.location.href = `/orders/receipt/${resData.order_id}`;
+                window.location.href = `/orders/receipt/${resData.id}`;
             } else {
-                const err = await response.json();
-                alert('Hitilafu: ' + err.detail);
+                let errorMessage = 'Imeshindikana kukamilisha mauzo';
+                try {
+                    const err = await response.json();
+                    if (err.detail) {
+                        errorMessage = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+                    }
+                } catch (errParse) {
+                    errorMessage = response.statusText;
+                }
+                alert('Hitilafu: ' + errorMessage);
             }
         });
     </script>

@@ -1,100 +1,182 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sw">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Products</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usimamizi wa Bidhaa - POS System</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #334155;
+        }
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        .table th {
+            font-weight: 600;
+            color: #64748b;
+            background-color: #f1f5f9 !important;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .table td {
+            vertical-align: middle;
+            color: #334155;
+        }
+        .form-control {
+            border-radius: 10px;
+            padding: 0.65rem 1rem;
+            border-color: #cbd5e1;
+        }
+        .btn {
+            border-radius: 10px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 500;
+        }
+    </style>
 </head>
-<body class="bg-light p-4">
+<body class="py-4">
 
-<div class="container">
+<div class="container mb-5">
+    
+    <!-- Top Header & Back Button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Products</h1>
-        <a href="/products/add" class="btn btn-success">Add New Product</a>
+        <div>
+            <a href="/" class="text-decoration-none text-muted small fw-semibold d-flex align-items-center gap-1 mb-1">
+                <i class="bi bi-arrow-left"></i> Rudi kwenye Dashboard
+            </a>
+            <h2 class="fw-bold text-dark mb-0"><i class="bi bi-box-seam text-primary me-2"></i>Usimamizi wa Bidhaa</h2>
+        </div>
+        <a href="/products/add" class="btn btn-success shadow-sm d-flex align-items-center gap-2">
+            <i class="bi bi-plus-circle fs-5"></i> Weka Bidhaa Mpya
+        </a>
     </div>
 
-    <!-- SEHEMU MPYA: Kupakia Mzigo kwa Excel (Bulk Import) -->
-    <div class="card shadow-sm p-4 mb-4 bg-white border-0">
-        <h5 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-excel text-success me-2"></i>Pakia Mzigo kwa Excel (Bulk Import)</h5>
+    <!-- Pakia Mzigo kwa Excel (Bulk Import) Card -->
+    <div class="card p-4 mb-4 bg-white">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="bg-success bg-opacity-10 text-success p-2 rounded-3">
+                <i class="bi bi-file-earmark-excel fs-5"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-0">Pakia Mzigo kwa Excel (Bulk Import)</h5>
+        </div>
         <form action="/products/upload-excel" method="POST" enctype="multipart/form-data" class="row g-3 align-items-center">
             <div class="col-md-8">
                 <input type="file" name="file" class="form-control" accept=".xlsx, .xls, .csv" required>
-                <div class="form-text">Faili linatakiwa kuwa na nguzo (columns): <code>name, barcode, size, cost_price, price, quantity, min_stock_level</code></div>
+                <div class="form-text mt-1 text-muted">
+                    <i class="bi bi-info-circle me-1"></i> Faili linatakiwa kuwa na nguzo (columns): <code>name, barcode, size, cost_price, price, quantity, min_stock_level</code>
+                </div>
             </div>
             <div class="col-md-4">
-                <button type="submit" class="btn btn-success w-100 fw-semibold">
-                    <i class="bi bi-upload me-1"></i> Pakia Mzigo Stoo
+                <button type="submit" class="btn btn-success w-100 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                    <i class="bi bi-upload"></i> Pakia Mzigo Stoo
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- Search Bar Sahihi ya FastAPI -->
-    <div class="row mb-3">
+    <!-- Search & Filter Section -->
+    <div class="row mb-4">
         <div class="col-md-6">
             <form method="GET" action="/products" class="d-flex gap-2">
-                <input type="text" name="q" value="{{ request.query_params.get('q', '') }}" class="form-control" placeholder="Tafuta bidhaa kwa jina...">
-                <button type="submit" class="btn btn-primary">Tafuta</button>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted" style="border-radius: 10px 0 0 10px;">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" name="q" value="{{ request.query_params.get('q', '') }}" class="form-control border-start-0 ps-0" placeholder="Tafuta bidhaa kwa jina..." style="border-radius: 0 10px 10px 0;">
+                </div>
+                <button type="submit" class="btn btn-dark px-4 shadow-sm">Tafuta</button>
                 {% if request.query_params.get('q') %}
-                    <a href="/products" class="btn btn-outline-secondary">Ondoa</a>
+                    <a href="/products" class="btn btn-outline-secondary d-flex align-items-center">Ondoa</a>
                 {% endif %}
             </form>
         </div>
     </div>
 
-    <div class="card shadow-sm border-0">
+    <!-- Products Table Card -->
+    <div class="card overflow-hidden">
         <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Barcode</th>
-                        <th>Size</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th>Category</th>
-                        <th>Created At</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for product in products %}
-                    <tr>
-                        <td>{{ product.id }}</td>
-                        <td class="fw-bold">{{ product.name }}</td>
-                        <td>{{ product.barcode }}</td>
-                        <td>{{ product.size }}</td>
-                        <td>${{ "%.2f"|format(product.price) }}</td>
-                        <td>{{ product.quantity }}</td>
-                        <td>{{ product.category.name if product.category else '' }}</td>
-                        <td>{{ product.created_at.strftime("%Y-%m-%d") }}</td>
-                        <td class="text-center">
-                            <div class="d-flex justify-content-center gap-2">
-                                <a href="/products/edit/{{ product.id }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <form action="/products/delete/{{ product.id }}" method="post" style="display:inline;" onsubmit="return confirm('Delete this product?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="9" class="text-center py-4 text-muted">Hakuna bidhaa zilizopatikana.</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>Jina la Bidhaa</th>
+                            <th>Barcode</th>
+                            <th>Ukubwa (Size)</th>
+                            <th>Bei ya Kununua</th>
+                            <th>Bei ya Kuuza</th>
+                            <th>Idadi (Qty)</th>
+                            <th>Kundi (Category)</th>
+                            <th>Tarehe</th>
+                            <th class="text-center pe-4">Vitendo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for product in products %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-muted">#{{ product.id }}</td>
+                            <td class="fw-bold text-dark">{{ product.name }}</td>
+                            <td><span class="badge bg-light text-secondary border">{{ product.barcode or 'None' }}</span></td>
+                            <td>{{ product.size or 'None' }}</td>
+                            <td class="text-secondary">TZS {{ "{:,.2f}".format(product.cost_price or 0.0) }}</td>
+                            <td class="fw-bold text-success">TZS {{ "{:,.2f}".format(product.price) }}</td>
+                            <td>
+                                {% if product.quantity <= 5 %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger px-2 py-1">{{ product.quantity }} (Michache)</span>
+                                {% else %}
+                                    <span class="badge bg-success bg-opacity-10 text-success px-2 py-1">{{ product.quantity }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.category %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ product.category.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ product.created_at.strftime("%Y-%m-%d") if product.created_at else '' }}</td>
+                            <td class="text-center pe-4">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="/products/edit/{{ product.id }}" class="btn btn-sm btn-light border text-primary rounded-2 px-2 py-1" title="Hariri">
+                                        <i class="bi bi-pencil-square"></i> Edit
+                                    </a>
+                                    <form action="/products/delete/{{ product.id }}" method="post" style="display:inline;" onsubmit="return confirm('Je, una uhakika unataka kufuta bidhaa hii?');">
+                                        <button type="submit" class="btn btn-sm btn-light border text-danger rounded-2 px-2 py-1" title="Futa">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <div class="py-4">
+                                    <i class="bi bi-box-seam fs-1 text-muted opacity-50 d-block mb-2"></i>
+                                    Hakuna bidhaa zilizopatikana kwenye mfumo kwa sasa.
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <div class="mt-3">
-        <a href="/" class="btn btn-secondary">Back to Dashboard</a>
-    </div>
 </div>
 
+<!-- Bootstrap 5 JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

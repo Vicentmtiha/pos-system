@@ -27,6 +27,7 @@ class Store(Base):
     products = relationship("Product", back_populates="store", cascade="all, delete-orphan")
     customers = relationship("Customer", back_populates="store", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="store", cascade="all, delete-orphan")
+    expenses = relationship("Expense", back_populates="store", cascade="all, delete-orphan")
 
 class Category(Base):
     __tablename__ = "categories"
@@ -44,8 +45,8 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True)
     store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     name = Column(String, nullable=False)
-    barcode = Column(String, unique=True, index=True, nullable=True)  # <--- Imeongezwa kwa ajili ya Barcode Scanner
-    size = Column(String, nullable=True)                              # <--- Imeongezwa kwa ajili ya Size / Vipimo (mfano: Small, 500ml)
+    barcode = Column(String, unique=True, index=True, nullable=True)  # Barcode Scanner
+    size = Column(String, nullable=True)                             # Size / Vipimo (mfano: Small, 500ml)
     cost_price = Column(Float, default=0.0)
     price = Column(Float, nullable=False)
     quantity = Column(Integer, default=0)
@@ -64,6 +65,7 @@ class Customer(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+    address = Column(String, nullable=True)                          # Anwani (Address)
     current_balance = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -109,3 +111,16 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     store = relationship("Store", back_populates="users")
+
+class Expense(Base):
+    __tablename__ = "expenses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    title = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    category = Column(String, default="Genel")
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    store = relationship("Store", back_populates="expenses")

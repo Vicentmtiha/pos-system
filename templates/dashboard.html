@@ -9,53 +9,97 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-hover-transform: translateY(-4px);
+        }
         body {
-            background-color: #f4f7f6;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #334155;
+        }
+        .navbar {
+            background: var(--primary-gradient) !important;
+            backdrop-filter: blur(10px);
+        }
+        .navbar-nav .nav-link {
+            color: #94a3b8 !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin: 0 2px;
+        }
+        .navbar-nav .nav-link:hover, .navbar-nav .nav-link.active {
+            color: #ffffff !important;
+            background-color: rgba(255, 255, 255, 0.08);
         }
         .card {
             border: none;
-            border-radius: 12px;
-            transition: transform 0.2s ease-in-out;
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
         }
         .card:hover {
-            transform: translateY(-3px);
+            transform: var(--card-hover-transform);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
         }
         .stat-card-icon {
-            font-size: 2rem;
-            opacity: 0.8;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.5rem;
         }
         .table th {
             font-weight: 600;
-            color: #475569;
-            background-color: #f8fafc !important;
+            color: #64748b;
+            background-color: #f1f5f9 !important;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }
+        .table td {
+            vertical-align: middle;
+            color: #334155;
+        }
+        .badge {
+            font-weight: 500;
+            letter-spacing: 0.025em;
+        }
+        /* Live clock styling */
+        .live-clock-badge {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
 
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4 shadow-sm py-3">
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4 sticky-top shadow-sm py-3">
         <div class="container">
-            <a class="navbar-brand fw-bold fs-4" href="/">
-                <i class="bi bi-shop text-success me-2"></i>POS <span class="text-success">System</span>
+            <a class="navbar-brand fw-bold fs-4 d-flex align-items-center gap-2" href="/">
+                <div class="bg-success text-white p-2 rounded-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                    <i class="bi bi-shop fs-5"></i>
+                </div>
+                <span>POS <span class="text-success">System</span></span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav ms-auto align-items-lg-center gap-1">
-                    <a class="nav-link active px-3 rounded" href="/"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
-                    <a class="nav-link px-3 rounded" href="/categories"><i class="bi bi-tags me-1"></i> Categories</a>
-                    <a class="nav-link px-3 rounded" href="/products"><i class="bi bi-box-seam me-1"></i> Products</a>
-                    <a class="nav-link px-3 rounded" href="/customers"><i class="bi bi-people me-1"></i> Customers</a>
+                    <a class="nav-link active px-3 py-2 rounded-2" href="/"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
+                    <a class="nav-link px-3 py-2 rounded-2" href="/categories"><i class="bi bi-tags me-1"></i> Categories</a>
+                    <a class="nav-link px-3 py-2 rounded-2" href="/products"><i class="bi bi-box-seam me-1"></i> Products</a>
+                    <a class="nav-link px-3 py-2 rounded-2" href="/customers"><i class="bi bi-people me-1"></i> Customers</a>
                     {% if current_user and current_user.role.value == 'ADMIN' %}
-                    <a class="nav-link px-3 rounded" href="/users"><i class="bi bi-person-badge me-1"></i> Users</a>
+                    <a class="nav-link px-3 py-2 rounded-2" href="/users"><i class="bi bi-person-badge me-1"></i> Users</a>
                     {% endif %}
-                    <a class="nav-link px-3 rounded position-relative" href="/inventory/low-stock">
+                    <a class="nav-link px-3 py-2 rounded-2 position-relative" href="/inventory/low-stock">
                         <i class="bi bi-exclamation-triangle me-1"></i> Low Stock
                         {% if low_stock_count > 0 %}
                             <span class="position-absolute top-25 start-100 translate-middle badge rounded-pill bg-danger">
@@ -63,14 +107,14 @@
                             </span>
                         {% endif %}
                     </a>
-                    <a class="nav-link px-3 rounded" href="/reports/profit-loss"><i class="bi bi-graph-up-arrow me-1"></i> P&L Reports</a>
+                    <a class="nav-link px-3 py-2 rounded-2" href="/reports/profit-loss"><i class="bi bi-graph-up-arrow me-1"></i> P&L Reports</a>
                     
-                    <div class="ms-lg-3 mt-2 mt-lg-0 d-flex gap-2">
-                        <a class="btn btn-success text-white px-3 fw-semibold shadow-sm" href="/orders/create">
-                            <i class="bi bi-cart-plus me-1"></i> Mauzo Mapya
+                    <div class="ms-lg-3 mt-3 mt-lg-0 d-flex gap-2 align-items-center">
+                        <a class="btn btn-success text-white px-3 py-2 fw-semibold shadow-sm d-flex align-items-center gap-1 rounded-3" href="/orders/create">
+                            <i class="bi bi-cart-plus"></i> Mauzo Mapya
                         </a>
-                        <a class="btn btn-outline-light btn-sm d-flex align-items-center" href="/logout" title="Toka Nje">
-                            <i class="bi bi-box-arrow-right"></i>
+                        <a class="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center rounded-3 p-2" href="/logout" title="Toka Nje" style="width: 38px; height: 38px;">
+                            <i class="bi bi-box-arrow-right fs-6"></i>
                         </a>
                     </div>
                 </div>
@@ -81,16 +125,17 @@
     <!-- Main Content Container -->
     <div class="container mb-5">
         
-        <!-- Welcome Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- Welcome Header & Live Clock -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
             <div>
                 <h4 class="mb-1 text-dark fw-bold">Karibu, {{ current_user.full_name if current_user else 'Mtumiaji' }}! 👋</h4>
-                <p class="text-muted mb-0">Hapa kuna muhtasari wa biashara yako kwa siku ya leo.</p>
+                <p class="text-muted mb-0">Hapa kuna muhtasari wa moja kwa moja wa biashara yako leo.</p>
             </div>
             <div>
-                <span class="badge bg-white text-dark shadow-sm p-2 fs-6 border">
-                    <i class="bi bi-calendar-event text-primary me-1"></i> {{ current_date if current_date else 'Leo' }}
-                </span>
+                <div class="badge live-clock-badge shadow-sm p-2 px-3 fs-6 d-flex align-items-center gap-2 rounded-pill">
+                    <i class="bi bi-clock-history text-success"></i>
+                    <span id="live-clock">Inapakia saa...</span>
+                </div>
             </div>
         </div>
 
@@ -98,14 +143,14 @@
         <div class="row g-4 mb-4">
             
             <!-- Widget 1: Mauzo ya Leo -->
-            <div class="col-md-3">
-                <div class="card bg-primary text-white shadow p-3 h-100">
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-white p-4 h-150 border-start border-primary border-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-white-50 text-uppercase fs-7 mb-1 fw-semibold">Mauzo ya Leo</h6>
-                            <h3 class="mb-0 fw-bold">TZS {{ "{:,.2f}".format(today_sales) }}</h3>
+                            <span class="text-muted text-uppercase fs-7 mb-1 fw-bold d-block">Mauzo ya Leo</span>
+                            <h3 class="mb-0 fw-bold text-dark">TZS {{ "{:,.2f}".format(today_sales) }}</h3>
                         </div>
-                        <div class="stat-card-icon">
+                        <div class="stat-card-icon bg-primary bg-opacity-10 text-primary">
                             <i class="bi bi-currency-exchange"></i>
                         </div>
                     </div>
@@ -113,18 +158,18 @@
             </div>
 
             <!-- Widget 2: Faida au Hasara ya Leo -->
-            <div class="col-md-3">
-                <div class="card {% if today_profit >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white shadow p-3 h-100">
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-white p-4 h-150 border-start {% if today_profit >= 0 %}border-success{% else %}border-danger{% endif %} border-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-white-50 text-uppercase fs-7 mb-1 fw-semibold">
+                            <span class="text-muted text-uppercase fs-7 mb-1 fw-bold d-block">
                                 {% if today_profit >= 0 %}Faida ya Leo{% else %}Hasara ya Leo{% endif %}
-                            </h6>
-                            <h3 class="mb-0 fw-bold">
+                            </span>
+                            <h3 class="mb-0 fw-bold {% if today_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
                                 TZS {{ "{:,.2f}".format(today_profit | abs) }}
                             </h3>
                         </div>
-                        <div class="stat-card-icon">
+                        <div class="stat-card-icon {% if today_profit >= 0 %}bg-success text-success{% else %}bg-danger text-danger{% endif %} bg-opacity-10">
                             <i class="bi bi-graph-up-arrow"></i>
                         </div>
                     </div>
@@ -132,14 +177,14 @@
             </div>
 
             <!-- Widget 3: Oda za Leo -->
-            <div class="col-md-3">
-                <div class="card bg-info text-white shadow p-3 h-100">
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-white p-4 h-150 border-start border-info border-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-white-50 text-uppercase fs-7 mb-1 fw-semibold">Jumla ya Oda</h6>
-                            <h3 class="mb-0 fw-bold">{{ today_orders_count }} <span class="fs-6 fw-normal">Oda</span></h3>
+                            <span class="text-muted text-uppercase fs-7 mb-1 fw-bold d-block">Jumla ya Oda</span>
+                            <h3 class="mb-0 fw-bold text-dark">{{ today_orders_count }} <span class="fs-6 fw-normal text-muted">Oda</span></h3>
                         </div>
-                        <div class="stat-card-icon">
+                        <div class="stat-card-icon bg-info bg-opacity-10 text-info">
                             <i class="bi bi-receipt"></i>
                         </div>
                     </div>
@@ -147,15 +192,15 @@
             </div>
 
             <!-- Widget 4: Bidhaa Zilizopungua -->
-            <div class="col-md-3">
+            <div class="col-xl-3 col-md-6">
                 <a href="/inventory/low-stock" class="text-decoration-none">
-                    <div class="card bg-dark text-white shadow p-3 h-100 border-start border-warning border-4">
+                    <div class="card bg-white p-4 h-150 border-start border-warning border-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="text-white-50 text-uppercase fs-7 mb-1 fw-semibold">Stoo Imepungua</h6>
-                                <h3 class="mb-0 fw-bold text-warning">{{ low_stock_count }} <span class="fs-6 fw-normal text-white">Bidhaa</span></h3>
+                                <span class="text-muted text-uppercase fs-7 mb-1 fw-bold d-block">Stoo Imepungua</span>
+                                <h3 class="mb-0 fw-bold text-warning">{{ low_stock_count }} <span class="fs-6 fw-normal text-secondary">Bidhaa</span></h3>
                             </div>
-                            <div class="stat-card-icon text-warning">
+                            <div class="stat-card-icon bg-warning bg-opacity-10 text-warning">
                                 <i class="bi bi-exclamation-octagon"></i>
                             </div>
                         </div>
@@ -166,46 +211,48 @@
         </div>
 
         <!-- Quick Actions Toolbar -->
-        <div class="card shadow-sm mb-4 p-3 bg-white">
+        <div class="card shadow-sm mb-4 p-3 bg-white border-0">
             <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
-                <span class="fw-bold text-secondary"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Vitendo vya Haraka:</span>
+                <span class="fw-bold text-secondary d-flex align-items-center gap-1"><i class="bi bi-lightning-charge-fill text-warning"></i> Vitendo vya Haraka:</span>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="/orders/create" class="btn btn-sm btn-outline-success"><i class="bi bi-plus-circle me-1"></i> Anza Mauzo (POS)</a>
-                    <a href="/products/add" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-seam me-1"></i> Weka Bidhaa Mpya</a>
-                    <a href="/customers/add" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person-plus me-1"></i> Sajili Mteja</a>
-                    <a href="/customers/debts" class="btn btn-sm btn-outline-danger"><i class="bi bi-wallet2 me-1"></i> Angalia Madeni</a>
+                    <a href="/orders/create" class="btn btn-sm btn-success text-white"><i class="bi bi-plus-circle me-1"></i> Anza Mauzo (POS)</a>
+                    <a href="/products/add" class="btn btn-sm btn-light border text-dark"><i class="bi bi-box-seam me-1 text-primary"></i> Weka Bidhaa Mpya</a>
+                    <a href="/customers/add" class="btn btn-sm btn-light border text-dark"><i class="bi bi-person-plus me-1 text-success"></i> Sajili Mteja</a>
+                    <a href="/customers/debts" class="btn btn-sm btn-light border text-dark"><i class="bi bi-wallet2 me-1 text-danger"></i> Angalia Madeni</a>
                 </div>
             </div>
         </div>
 
         <!-- Orodha ya Oda za Hivi Karibuni -->
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>Historia ya Mauzo ya Hivi Karibuni</h5>
-                <a href="/orders/create" class="btn btn-sm btn-primary fw-semibold"><i class="bi bi-plus me-1"></i> Mauzo Mapya</a>
+        <div class="card shadow-sm border-0 overflow-hidden">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
+                <h5 class="mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-clock-history text-primary"></i>Historia ya Mauzo ya Hivi Karibuni
+                </h5>
+                <a href="/orders/create" class="btn btn-sm btn-primary fw-semibold rounded-pill px-3"><i class="bi bi-plus me-1"></i> Mauzo Mapya</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light text-uppercase fs-7">
+                        <thead class="text-uppercase">
                             <tr>
-                                <th class="ps-3">Order ID</th>
+                                <th class="ps-4">Order ID</th>
                                 <th>Mteja</th>
                                 <th>Jumla (TZS)</th>
                                 <th>Hali (Status)</th>
                                 <th>Tarehe & Saa</th>
-                                <th class="text-center pe-3">Vitendo</th>
+                                <th class="text-center pe-4">Vitendo</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for order in orders %}
                             <tr>
-                                <td class="ps-3 fw-bold text-primary">#{{ order.id }}</td>
+                                <td class="ps-4 fw-bold text-primary">#{{ order.id }}</td>
                                 <td>
                                     {% if order.customer %}
-                                        <span class="fw-semibold text-dark"><i class="bi bi-person me-1 text-muted"></i>{{ order.customer.name }}</span>
+                                        <span class="fw-semibold text-dark d-flex align-items-center gap-1"><i class="bi bi-person-circle text-muted"></i>{{ order.customer.name }}</span>
                                     {% else %}
-                                        <span class="badge bg-light text-secondary border">Walk-in Customer</span>
+                                        <span class="badge bg-light text-secondary border px-2 py-1">Walk-in Customer</span>
                                     {% endif %}
                                 </td>
                                 <td class="fw-bold text-success">
@@ -214,22 +261,22 @@
                                 <td>
                                     {% set st = order.status.value if order.status.value is defined else order.status.name %}
                                     {% if st == 'COMPLETED' %}
-                                        <span class="badge bg-success bg-opacity-15 text-success px-2 py-1">COMPLETED</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1 rounded-pill">COMPLETED</span>
                                     {% else %}
-                                        <span class="badge bg-warning bg-opacity-15 text-warning px-2 py-1">{{ st }}</span>
+                                        <span class="badge bg-warning bg-opacity-10 text-warning px-2.5 py-1 rounded-pill">{{ st }}</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-muted small">
                                     <i class="bi bi-calendar3 me-1"></i>{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '-' }}
                                 </td>
-                                <td class="text-center pe-3">
+                                <td class="text-center pe-4">
                                     <div class="d-flex justify-content-center gap-2">
-                                        <a href="/orders/receipt/{{ order.id }}" class="btn btn-sm btn-light border text-dark" target="_blank" title="Chapisha Risiti">
+                                        <a href="/orders/receipt/{{ order.id }}" class="btn btn-sm btn-light border text-dark rounded-2" target="_blank" title="Chapisha Risiti">
                                             <i class="bi bi-receipt"></i> Risiti
                                         </a>
                                         {% if current_user and current_user.role.value == 'ADMIN' %}
                                         <form action="/orders/delete/{{ order.id }}" method="POST" onsubmit="return confirm('Je, una uhakika unataka kufuta oda hii? Stock ya bidhaa itarudishwa.');" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Futa Oda">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-2" title="Futa Oda">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -255,7 +302,25 @@
 
     </div>
 
-    <!-- Bootstrap 5 JS Bundle -->
+    <!-- Bootstrap 5 JS Bundle & Real-time Live Clock Script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateLiveClock() {
+            const now = new Date();
+            // Inabadilisha kwenda mtindo mzuri wa tarehe na saa ya Kiswahili/Kitanzania
+            const options = { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            };
+            document.getElementById('live-clock').innerText = now.toLocaleDateString('sw-TZ', options);
+        }
+        setInterval(updateLiveClock, 1000);
+        updateLiveClock(); // Kuita mara moja ukurasa unapofunguka
+    </script>
 </body>
 </html>

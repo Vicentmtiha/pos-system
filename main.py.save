@@ -1,7 +1,3 @@
-from datetime import datetime, date
-import pytz
-from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from fastapi import FastAPI, Request, Depends, Form, HTTPException, status, Cookie, UploadFile, File
 from fastapi.responses import RedirectResponse
@@ -10,14 +6,15 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import uvicorn
-from typing import Optional, List
+from datetime import datetime, date
+from typing import Optional
 import bcrypt
 import requests
 import io
 import pandas as pd
 
 # Import models & database
-from models import Base, Store, Category, Product, Customer, Order, OrderItem, OrderStatus, User, UserRole, Expense
+from models import Base, Store, Category, Product, Customer, Order, OrderItem, OrderStatus, User, UserRole
 from database import engine, get_db
 
 app = FastAPI(title="POS SaaS System - Full Edition")
@@ -27,20 +24,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Tengeneza meza zote kiotomatiki
 Base.metadata.create_all(bind=engine)
-
-
-# ==========================================
-# PYDANTIC MODELS FOR ORDERS API
-# ==========================================
-class OrderItemSchema(BaseModel):
-    product_id: int
-    quantity: int
-
-class OrderCreateSchema(BaseModel):
-    customer_id: Optional[int] = None
-    items: List[OrderItemSchema]
-    payment_method: str = "Cash"
-    amount_paid: float = 0.0
 
 
 # ==========================================
@@ -287,15 +270,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     if not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
-    # Pata tarehe ya leo kwa saa za Afrika Mashariki
-    tz_eat = pytz.timezone('Africa/Dar_es_Salaam')
-    today_eat = datetime.now(tz_eat).date()
-
-    # Chuja oda zilizofanyika leo kwa kuzingatia tarehe ya EAT
     today_orders = db.query(Order).filter(
         Order.store_id == current_user.store_id,
-        Order.status == OrderStatus.COMPLETED,
-        func.date(Order.created_at) == today_eat
+        Order.status == OrderStatus.COMPLETED
     ).all()
     
     today_sales = 0.0
@@ -331,7 +308,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 
 
 # ==========================================
-# 5. CATEGORIES CRUD (ZIMEBORESHWA KUONDOA 404)
+# 5. CATEGORIES CRUD
 # ==========================================
 @app.get("/categories")
 def list_categories(request: Request, db: Session = Depends(get_db)):
@@ -368,201 +345,41 @@ def add_category(name: str = Form(...), description: str = Form(None), db: Sessi
     db.commit()
     return RedirectResponse(url="/categories", status_code=status.HTTP_303_SEE_OTHER)
 
-@app.get("/categories/edit/{category_id}")
-def edit_category_form(request: Request, category_id: int, db: Session = Depends(get_db)):
-    current_user = get_current_user(request, db)
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    category = get_object_or_404(Category, db, category_id)
-    if category.store_id != current_user.store_id:
-        raise HTTPException(status_code=403, detail="Huna ruhusa")
-
-    return templates.TemplateResponse(
-        request=request,
-        name="add_category.html",
-        context={"category": category, "current_user": current_user}
-    )
-
-@app.post("/categories/edit/{category_id}")
-def edit_category(
-    category_id: int,
-    name: str = Form(...),
-    description: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    category = get_object_or_404(Category, db, category_id)
-    if category.store_id != current_user.store_id:
-        raise HTTPException(status_code=403, detail="Huna ruhusa")
-
-    category.name = name
-    category.description = description
-    db.commit()
-    return RedirectResponse(url="/categories?success=updated", status_code=status.HTTP_303_SEE_OTHER)
-
-@app.post("/categories/delete/{category_id}")
-def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    category = get_object_or_404(Category, db, category_id)
-    if category.store_id != current_user.store_id:
-        raise HTTPException(status_code=403, detail="Huna ruhusa")
-
-    db.delete(category)
-    db.commit()
-    return RedirectResponse(url="/categories?success=deleted", status_code=status.HTTP_303_SEE_OTHER)
-
 
 # ==========================================
-# 6. PRODUCTS, EXCEL UPLOAD, DELETE & RESTOCK
+# 6. PRODUCTS & EXCEL UPLOAD
 # ==========================================
 @app.post("/products/upload-excel")
-async def upload_excel(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-        
+async def upload_products_excel(file: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
+        return {"error": "Tafadhali pakia faili la Excel au CSV pekee."}
+    
     try:
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(file.file)
+        contents = await file.read()
+        if file.filename.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(contents))
         else:
-            df = pd.read_excel(file.file)
-            
-        df.columns = df.columns.str.strip().str.lower()
-        df = df.where(pd.notnull(df), None)
+            df = pd.read_csv(io.BytesIO(contents))
         
-        for index, row in df.iterrows():
-            name = None
-            for col in df.columns:
-                if 'name' in col or 'bidhaa' in col or 'title' in col:
-                    name = row.get(col)
-                    break
-            if not name or str(name) == 'nan':
-                continue
-                
-            category_id = None
-            cat_name = None
-            for col in df.columns:
-                if 'cat' in col or 'aina' in col:
-                    cat_name = row.get(col)
-                    break
-            
-            if cat_name and str(cat_name) != 'nan' and str(cat_name).strip() != '':
-                cat_name_str = str(cat_name).strip()
-                category = db.query(Category).filter(
-                    Category.name.ilike(cat_name_str), 
-                    Category.store_id == current_user.store_id
-                ).first()
-                
-                if not category:
-                    category = Category(name=cat_name_str, store_id=current_user.store_id)
-                    db.add(category)
-                    db.commit()
-                    db.refresh(category)
-                
-                category_id = category.id
-
-            barcode_val = None
-            for col in df.columns:
-                if 'bar' in col or 'code' in col:
-                    barcode_val = row.get(col)
-                    break
-            barcode_val = str(barcode_val).strip() if barcode_val is not None and str(barcode_val) != 'nan' else None
-
-            size_val = None
-            for col in df.columns:
-                if 'size' in col or 'ukubwa' in col:
-                    size_val = row.get(col)
-                    break
-            size_val = str(size_val) if size_val is not None and str(size_val) != 'nan' else None
-            
-            cost_price_val = 0.0
-            for col in df.columns:
-                if 'cost' in col or 'nunua' in col or 'buying' in col:
-                    val = row.get(col)
-                    if val is not None and str(val) != 'nan':
-                        try:
-                            cost_price_val = float(val)
-                            break
-                        except ValueError:
-                            pass
-
-            price_val = 0.0
-            for col in df.columns:
-                if col == 'price' or 'uza' in col or 'selling' in col:
-                    val = row.get(col)
-                    if val is not None and str(val) != 'nan':
-                        try:
-                            price_val = float(val)
-                            break
-                        except ValueError:
-                            pass
-
-            quantity_val = 0
-            for col in df.columns:
-                if 'qty' in col or 'quan' in col or 'idadi' in col or 'stock' in col:
-                    val = row.get(col)
-                    if val is not None and str(val) != 'nan':
-                        try:
-                            quantity_val = int(val)
-                            break
-                        except ValueError:
-                            pass
-
-            min_stock_val = 5
-            for col in df.columns:
-                if 'min' in col or 'kiwango' in col:
-                    val = row.get(col)
-                    if val is not None and str(val) != 'nan':
-                        try:
-                            min_stock_val = int(val)
-                            break
-                        except ValueError:
-                            pass
-            
-            # Angalia kama bidhaa yenye Barcode hii tayari ipo kwenye duka hili
-            existing_product = None
-            if barcode_val:
-                existing_product = db.query(Product).filter(
-                    Product.store_id == current_user.store_id,
-                    Product.barcode == barcode_val
-                ).first()
-            
-            if existing_product:
-                # Kama ipo, sasisha taarifa zake badala ya kusababisha kosa
-                existing_product.name = str(name).strip()
-                existing_product.size = size_val
-                existing_product.cost_price = cost_price_val
-                existing_product.price = price_val
-                existing_product.quantity = quantity_val
-                existing_product.min_stock_level = min_stock_val
-                if category_id:
-                    existing_product.category_id = category_id
-            else:
-                # Kama haipo, tengeneza mpya
-                new_product = Product(
-                    store_id=current_user.store_id,
-                    name=str(name).strip(),
-                    barcode=barcode_val,
-                    size=size_val,
-                    cost_price=cost_price_val,
-                    price=price_val,
-                    quantity=quantity_val,
-                    min_stock_level=min_stock_val,
-                    category_id=category_id
-                )
-                db.add(new_product)
-        
+        for _, row in df.iterrows():
+            product = Product(
+                name=str(row.get('name', 'Bidhaa Mpya')),
+                barcode=str(row.get('barcode', '')),
+                size=str(row.get('size', '')),
+                cost_price=float(row.get('cost_price', 0)),
+                price=float(row.get('price', 0)),
+                quantity=int(row.get('quantity', 0)),
+                min_stock_level=int(row.get('min_stock_level', 5)),
+                store_id=current_user.store_id if hasattr(current_user, 'store_id') else 1
+            )
+            db.add(product)
         db.commit()
-        return RedirectResponse(url="/products?success=uploaded", status_code=status.HTTP_303_SEE_OTHER)
-        
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Hitilafu katika kusoma faili la Excel: {str(e)}")
+        return {"error": f"Imetokea hitilafu wakati wa kusoma faili: {str(e)}"}
+        
+    return {"message": "Bidhaa zote zimeingizwa stoo kwa mafanikio makubwa!"}
+
 @app.get("/products")
 async def products(request: Request, q: str = None, db: Session = Depends(get_db)):
     current_user = get_current_user(request, db)
@@ -588,6 +405,7 @@ async def products(request: Request, q: str = None, db: Session = Depends(get_db
             "current_user": current_user
         }
     )
+
 
 @app.get("/products/add")
 def add_product_form(request: Request, db: Session = Depends(get_db)):
@@ -682,38 +500,6 @@ def edit_product(
 
     db.commit()
     return RedirectResponse(url="/products?success=product_updated", status_code=status.HTTP_303_SEE_OTHER)
-
-@app.post("/products/delete/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    product = get_object_or_404(Product, db, product_id)
-    if product.store_id != current_user.store_id:
-        raise HTTPException(status_code=403, detail="Huna ruhusa")
-        
-    db.delete(product)
-    db.commit()
-    return RedirectResponse(url="/products?success=product_deleted", status_code=status.HTTP_303_SEE_OTHER)
-
-@app.post("/products/restock/{product_id}")
-def restock_product(
-    product_id: int,
-    additional_quantity: int = Form(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    product = get_object_or_404(Product, db, product_id)
-    if product.store_id != current_user.store_id:
-        raise HTTPException(status_code=403, detail="Huna ruhusa")
-
-    product.quantity += additional_quantity
-    db.commit()
-    
-    return RedirectResponse(url="/inventory/low-stock?success=restocked", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # ==========================================
@@ -827,108 +613,23 @@ def edit_customer(
 
 
 # ==========================================
-# 8. ORDERS, POS, DELETE & BARCODE SEARCH API
+# 8. ORDERS, POS & BARCODE SEARCH API
 # ==========================================
-@app.get("/orders/create")
-def create_order_form(request: Request, db: Session = Depends(get_db)):
-    current_user = get_current_user(request, db)
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
-    customers = db.query(Customer).filter(Customer.store_id == current_user.store_id).all()
-    products = db.query(Product).filter(Product.store_id == current_user.store_id, Product.quantity > 0).all()
-    return templates.TemplateResponse(
-        request=request,
-        name="create_order.html",
-        context={"customers": customers, "products": products, "current_user": current_user}
-    )
-
+# Ongeza hii route ya POST hapa chini yake ili kupokea data za mauzo kutoka kwenye kitufe cha "Complete Sales"
 @app.post("/orders/create")
 def save_new_order(
-    order_data: OrderCreateSchema,
+    request: Request, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     if not current_user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    if not order_data.items:
-        raise HTTPException(status_code=400, detail="Hakuna bidhaa kwenye oda hii")
-
-    total_amount = 0.0
-    order_items_to_create = []
-
-    for item in order_data.items:
-        product = db.query(Product).filter(
-            Product.id == item.product_id, 
-            Product.store_id == current_user.store_id
-        ).first()
-
-        if not product:
-            raise HTTPException(status_code=404, detail=f"Bidhaa yenye ID {item.product_id} haipatikani")
-
-        if product.quantity < item.quantity:
-            raise HTTPException(status_code=400, detail=f"Bidhaa '{product.name}' imeisha stoo (Zilizopo: {product.quantity})")
-
-        item_total = product.price * item.quantity
-        total_amount += item_total
-
-        product.quantity -= item.quantity
-
-        order_items_to_create.append({
-            "product_id": product.id,
-            "quantity": item.quantity,
-            "price": product.price,
-            "subtotal": item_total
-        })
-
-    # Pata muda kamili wa EAT (Afrika Mashariki) wakati oda inatengenezwa
-    tz_eat = pytz.timezone('Africa/Dar_es_Salaam')
-    current_eat_time = datetime.now(tz_eat).replace(tzinfo=None)
-
-    new_order = Order(
-        store_id=current_user.store_id,
-        customer_id=order_data.customer_id,
-        total_amount=total_amount,
-        status=OrderStatus.COMPLETED,
-        created_at=current_eat_time
-    )
-    db.add(new_order)
-    db.flush()
-
-    for itm in order_items_to_create:
-        order_item = OrderItem(
-            order_id=new_order.id,
-            product_id=itm["product_id"],
-            quantity=itm["quantity"],
-            price=itm["price"],
-            subtotal=itm["subtotal"]
-        )
-        db.add(order_item)
-
-    db.commit()
-    db.refresh(new_order)
-
-    return {"success": True, "id": new_order.id, "message": "Mauzo yamekamilishwa kwa mafanikio!"}
-
-@app.post("/orders/delete/{order_id}")
-def delete_order(order_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    order = get_object_or_404(Order, db, order_id)
-    if order.store_id != current_user.store_id:
-        raise HTTPException(status_code=403, detail="Huna ruhusa")
-
-    # Rudisha bidhaa stoo kama oda ilikuwa imekamilika
-    for item in order.order_items:
-        if item.product:
-            item.product.quantity += item.quantity
-
-    db.delete(order)
-    db.commit()
-    return RedirectResponse(url="/reports/sales?success=deleted", status_code=status.HTTP_303_SEE_OTHER)
-
+    
+    # Weka hapa mantiki (logic) yako ya kuchukua data zinazotumwa na JavaScript,
+    # kupunguza idadi ya bidhaa stoo (stock), na kuhifadhi Oda kwenye database.
+    
+    return {"message": "Oda imehifadhiwa mafanikio!"}
 @app.get("/api/products/search")
 def api_search_product(barcode: Optional[str] = None, query: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not current_user:
@@ -984,15 +685,12 @@ def list_expenses(request: Request, db: Session = Depends(get_db)):
     if not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
-    expenses = db.query(Expense).filter(Expense.store_id == current_user.store_id).all()
-    total_expenses = sum(e.amount for e in expenses)
-
     return templates.TemplateResponse(
         request=request,
         name="expenses.html",
         context={
-            "expenses": expenses,
-            "total_expenses": total_expenses,
+            "expenses": [],
+            "total_expenses": 0.0,
             "current_user": current_user
         }
     )
@@ -1009,17 +707,7 @@ def add_expense(
     if not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
         
-    new_expense = Expense(
-        store_id=current_user.store_id,
-        title=title,
-        amount=amount,
-        category=category,
-        note=note
-    )
-    db.add(new_expense)
-    db.commit()
-    
-    return RedirectResponse(url="/expenses?success=added", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/expenses", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # ==========================================
@@ -1064,26 +752,6 @@ def sales_report(
         }
     )
 
-@app.get("/inventory/low-stock", response_class=HTMLResponse)
-def low_stock_products(request: Request, db: Session = Depends(get_db)):
-    current_user = get_current_user(request, db)
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    products = db.query(Product).filter(
-        Product.store_id == current_user.store_id,
-        Product.quantity <= Product.min_stock_level
-    ).all()
-    
-    return templates.TemplateResponse(
-        request, 
-        "low_stock.html", 
-        {
-            "products": products, 
-            "current_user": current_user
-        }
-    )
-
 @app.get("/reports/stock-valuation")
 def stock_valuation_report(request: Request, db: Session = Depends(get_db)):
     current_user = get_current_user(request, db)
@@ -1121,7 +789,7 @@ def profit_loss_report(request: Request, db: Session = Depends(get_db)):
     
     total_revenue = sum(order.total_amount for order in orders if hasattr(order, 'total_amount'))
     
-    total_cogs = 0 
+    total_cogs = 0  # <--- Imeongezwa hapa kuzuia TypeError ya undefined
     for order in orders:
         if hasattr(order, 'order_items') and order.order_items:
             for item in order.order_items:
@@ -1137,11 +805,42 @@ def profit_loss_report(request: Request, db: Session = Depends(get_db)):
             "current_user": current_user,
             "total_revenue": total_revenue,
             "total_cost": total_cogs,
-            "total_cogs": total_cogs, 
+            "total_cogs": total_cogs,  # <--- Imetumwa kwa template ya profit_loss.html
             "net_profit": net_profit,
             "orders": orders
         }
     )
+
+@app.get("/reports/inventory")
+def inventory_report(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    products = db.query(Product).filter(Product.store_id == current_user.store_id).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="inventory_report.html",
+        context={
+            "current_user": current_user,
+            "products": products
+        }
+    )
+
+
+# ==========================================
+# 11. STORE SETTINGS & CONFIGURATIONS
+# ==========================================
+@app.get("/settings")
+def store_settings_page(request: Request, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    store = db.query(Store).filter(Store.id == admin.store_id).first()
+    return templates.TemplateResponse(
+        request=request,
+        name="settings.html",
+        context={"store": store, "current_user": admin}
+    )
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
